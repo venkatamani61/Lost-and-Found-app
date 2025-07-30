@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Lost and Found Portal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 0 20px;
+            color: #333;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 40px;
+            font-weight: 700;
+            color: #2980b9;
+        }
+        a.btn {
+            display: inline-block;
+            margin: 15px;
+            padding: 20px 40px;
+            background-color: #2980b9;
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.2rem;
+            transition: background-color 0.3s ease;
+        }
+        a.btn:hover {
+            background-color: #1c5d9c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome To Lost & Found Tracker App</h1>
+
+    <a href="{{ url_for('lost_items') }}" class="btn">View Lost Items</a>
+    <a href="{{ url_for('found_items') }}" class="btn">View Found Items</a>
+    <a href="{{ url_for('submit') }}" class="btn">Submit Item</a>
+</body>
+</html>

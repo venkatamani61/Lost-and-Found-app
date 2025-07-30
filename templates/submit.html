@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Submit Item - Lost and Found</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            padding: 40px;
+            max-width: 480px;
+            margin: 0 auto;
+            color: #333;
+        }
+        a.home-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            background-color: #2980b9;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        form {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        input, textarea, select {
+            width: 90%;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1.5px solid #ccc;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #2980b9;
+            outline: none;
+        }
+        button {
+            background-color: #2980b9;
+            color: white;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            padding: 15px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #1c5d9c;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="{{ url_for('home') }}" class="home-btn">← Home</a>
+
+    <h1>Submit Lost or Found Item</h1>
+
+    <!-- ADD enctype="multipart/form-data" to allow file uploads -->
+    <form action="{{ url_for('submit') }}" method="POST" enctype="multipart/form-data">
+        <input type="text" name="name" placeholder="Object Name" required />
+        <textarea name="description" placeholder="Description" required></textarea>
+        <input type="text" name="contact" placeholder="Your Contact Info" required />
+        <select name="status" required>
+            <option value="" disabled selected>Select status</option>
+            <option value="Lost">Lost</option>
+            <option value="Found">Found</option>
+        </select>
+        <!-- Image Upload Input -->
+        <input type="file" name="image" accept="image/*" required />
+
+        <button type="submit">Submit</button>
+    </form>
+
+</body>
+</html>
