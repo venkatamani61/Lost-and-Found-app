@@ -72,6 +72,15 @@ def delete_item(item_id):
         return '', 500
 
 if __name__ == '__main__':
+    import os
+
+    # Create upload folder if it doesn't exist
     if not os.path.exists('static/uploads'):
         os.makedirs('static/uploads')
-    app.run(debug=True, port=5003)
+
+    # Get dynamic port for Render (default to 5000 locally)
+    port = int(os.environ.get("PORT", 5000))
+
+    # Run Flask app
+    app.run(host='0.0.0.0', port=port)
+
