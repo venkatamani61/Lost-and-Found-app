@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 # MongoDB Connection
-MONGO_URI = "mongodb+srv://malleshma389:9966890456@cluster0.lihxidx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client['Loss']
 collection = db['items']
@@ -72,14 +72,13 @@ def delete_item(item_id):
         return '', 500
 
 if __name__ == '__main__':
-    import os
-
     # Create upload folder if it doesn't exist
     if not os.path.exists('static/uploads'):
         os.makedirs('static/uploads')
 
     # Get dynamic port for Render (default to 5000 locally)
     port = int(os.environ.get("PORT", 5000))
+    print(f"Starting app on port {port}...")
 
     # Run Flask app
     app.run(host='0.0.0.0', port=port)
