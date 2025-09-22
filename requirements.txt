@@ -3,3 +3,5 @@ gunicorn==21.2.0
 requests==2.31.0
 Jinja2==3.1.2
 Werkzeug==2.3.8
+pymongo==4.4.0
+dnspython==3.2.2
