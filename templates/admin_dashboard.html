@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <h2>All Items</h2>
+    <ul>
+        {% for item in items %}
+        <li>
+            {{ item.name }} - {{ item.status }} - {{ item.location }}
+            <form method="POST" action="{{ url_for('admin_delete_item', item_id=item._id) }}">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Add Admin</h2>
+    <form method="POST" action="{{ url_for('add_admin') }}">
+        <input type="text" name="username" placeholder="Admin Username" required><br><br>
+        <input type="password" name="password" placeholder="Password" required><br><br>
+        <button type="submit">Add Admin</button>
+    </form>
+
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+</body>
+</html>
