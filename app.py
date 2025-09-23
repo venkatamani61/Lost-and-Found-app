@@ -14,7 +14,7 @@ bcrypt = Bcrypt(app)
 # MongoDB Atlas
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
-db = client["lost_and_found"]
+db = client["Loss"]
 fs = gridfs.GridFS(db)
 
 # Flask-Login setup
