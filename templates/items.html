@@ -77,9 +77,6 @@
     style="width: 100%; height: 50px; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc;">
     <h1>{{ status }} Items</h1>
 
-
-
-
     {% if items %}
         {% for item in items %}
         <div class="card" data-id="{{ item._id }}">
@@ -88,9 +85,11 @@
             <p><strong>Contact:</strong> {{ item.contact }}</p>
             <p><strong>Status:</strong> {{ item.status }}</p>
             <p><strong>Submitted At:</strong> {{ item.submitted_at }}</p>
-            {% if item.image %}
+
+            {% if item.image_data %}
                 <p><strong>Object Image</strong></p>
-                <img src="{{ url_for('static', filename='uploads/' + item.image) }}" alt="Item Image" class="item-image">
+                <img src="data:image/png;base64,{{ item.image_data | b64encode }}" 
+                     alt="Item Image" class="item-image">
             {% endif %}
 
             <button class="delete-btn">Delete</button>
@@ -139,18 +138,18 @@
             overlay.style.display = 'none';
         });
 
+        // Search Logic
         document.getElementById('searchInput').addEventListener('keyup', function() {
-        const searchValue = this.value.toLowerCase();
-        document.querySelectorAll('.card').forEach(card => {
-            const itemName = card.querySelector('h3').innerText.toLowerCase();
-            if (itemName.includes(searchValue)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+            const searchValue = this.value.toLowerCase();
+            document.querySelectorAll('.card').forEach(card => {
+                const itemName = card.querySelector('h3').innerText.toLowerCase();
+                if (itemName.includes(searchValue)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
-    });
-        
     </script>
 
 </body>
