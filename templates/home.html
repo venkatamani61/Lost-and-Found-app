@@ -36,5 +36,11 @@
     <a href="{{ url_for('lost_items') }}" class="btn">View Lost Items</a>
     <a href="{{ url_for('found_items') }}" class="btn">View Found Items</a>
     <a href="{{ url_for('submit') }}" class="btn">Submit Item</a>
+    {% if current_user.is_authenticated %}
+        <p>Logged in as {{ current_user.id }} | <a href="{{ url_for('user_logout') }}">Logout</a></p>
+    {% else %}
+        <a href="{{ url_for('user_login') }}">Login</a> | 
+        <a href="{{ url_for('register') }}">Register</a>
+    {% endif %}
 </body>
 </html>
