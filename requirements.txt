@@ -2,4 +2,4 @@ Flask==3.1.2
 pymongo[srv]==4.5.0
 flask-bcrypt==1.0.1
 flask-login==0.6.3
-gridfs==1.0.0
+
