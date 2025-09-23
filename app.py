@@ -1,94 +1,211 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from pymongo import MongoClient
-from bson.objectid import ObjectId
-from bson.binary import Binary
-from datetime import datetime
+from bson import ObjectId
+import gridfs
 import os
-import base64
+from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "supersecret"
+bcrypt = Bcrypt(app)
 
-# MongoDB Connection
+# MongoDB Atlas
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
-db = client['Loss']
-collection = db['items']
+db = client["lost_and_found"]
+fs = gridfs.GridFS(db)
 
-# Base64 filter for templates
-@app.template_filter('b64encode')
-def b64encode_filter(data):
-    if data:
-        return base64.b64encode(data).decode('utf-8')
-    return ''
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "user_login"
 
-# Home Page
-@app.route('/')
+# User class
+class User(UserMixin):
+    def __init__(self, username, role="user"):
+        self.id = username
+        self.role = role
+
+@login_manager.user_loader
+def load_user(username):
+    user = db.users.find_one({"username": username})
+    if user:
+        return User(username=user["username"], role="user")
+    admin = db.admins.find_one({"username": username})
+    if admin:
+        return User(username=admin["username"], role="admin")
+    return None
+
+# -------------------
+# Routes for Users
+# -------------------
+@app.route("/")
 def home():
-    return render_template('home.html')
+    return render_template("home.html")
 
-# Lost Items Page
-@app.route('/lost')
+@app.route("/lost")
 def lost_items():
-    items = list(collection.find({'status': 'Lost'}))
-    for item in items:
-        item['_id'] = str(item['_id'])
-    return render_template('items.html', items=items, status='Lost')
+    return redirect(url_for("items", status="lost"))
 
-# Found Items Page
-@app.route('/found')
+@app.route("/found")
 def found_items():
-    items = list(collection.find({'status': 'Found'}))
-    for item in items:
-        item['_id'] = str(item['_id'])
-    return render_template('items.html', items=items, status='Found')
+    return redirect(url_for("items", status="found"))
 
-# Submit Page
-@app.route('/submit', methods=['GET', 'POST'])
+@app.route("/items")
+def items():
+    city = request.args.get("city")
+    status = request.args.get("status")
+    query = {}
+    if city and city != "all":
+        query["location"] = city
+    if status:
+        query["status"] = status
+
+    items = list(db.items.find(query))
+    cities = db.items.distinct("location")
+    return render_template("items.html", items=items, cities=cities, city=city, status=status)
+
+@app.route("/submit", methods=["GET", "POST"])
+@login_required
 def submit():
-    if request.method == 'POST':
+    if current_user.role != "user":
+        flash("Only normal users can submit items!", "danger")
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
         name = request.form['name']
         description = request.form['description']
         contact = request.form['contact']
         status = request.form['status']
-        submitted_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        # Handle Image Upload
-        image_data = None
-        image_filename = ''
+        location = request.form['location']
         image_file = request.files['image']
-        if image_file and image_file.filename != '':
-            image_filename = image_file.filename
-            image_data = Binary(image_file.read())  # Store image as Binary
 
-        # Insert document into MongoDB
-        collection.insert_one({
-            'name': name,
-            'description': description,
-            'contact': contact,
-            'status': status,
-            'submitted_at': submitted_at,
-            'image_filename': image_filename,
-            'image_data': image_data
+        image_id = fs.put(image_file.read(), filename=image_file.filename)
+
+        db.items.insert_one({
+            "name": name,
+            "description": description,
+            "contact": contact,
+            "status": status,
+            "location": location,
+            "image_id": image_id,
+            "submitted_by": current_user.id,
+            "submitted_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
 
+        flash("Item submitted successfully!", "success")
         return redirect(url_for('home'))
+
+    return render_template("submit.html")
+
+# -------------------
+# User Authentication
+# -------------------
+@app.route("/register", methods=["GET","POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        if db.users.find_one({"username": username}):
+            flash("User already exists!", "danger")
+            return redirect(url_for("register"))
+        hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
+        db.users.insert_one({"username": username, "password": hashed_pw})
+        flash("Registration successful! Please login.", "success")
+        return redirect(url_for("user_login"))
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET","POST"])
+def user_login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        user = db.users.find_one({"username": username})
+        if user and bcrypt.check_password_hash(user["password"], password):
+            login_user(User(username=user["username"], role="user"))
+            return redirect(url_for("home"))
+        flash("Invalid credentials", "danger")
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def user_logout():
+    logout_user()
+    return redirect(url_for("home"))
+
+# -------------------
+# Admin Authentication
+# -------------------
+@app.route("/admin/login", methods=["GET","POST"])
+def admin_login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        admin = db.admins.find_one({"username": username})
+        if admin and bcrypt.check_password_hash(admin["password"], password):
+            login_user(User(username=admin["username"], role="admin"))
+            return redirect(url_for("admin_dashboard"))
+        flash("Invalid credentials", "danger")
+    return render_template("admin_login.html")
+
+@app.route("/admin/dashboard")
+@login_required
+def admin_dashboard():
+    if current_user.role != "admin":
+        flash("Admins only!", "danger")
+        return redirect(url_for("home"))
+    items = db.items.find()
+    admins = db.admins.find()
+    return render_template("admin_dashboard.html", items=items, admins=admins)
+
+@app.route("/admin/add", methods=["POST"])
+@login_required
+def add_admin():
+    if current_user.role != "admin":
+        flash("Admins only!", "danger")
+        return redirect(url_for("home"))
+    username = request.form["username"]
+    password = request.form["password"]
+    if db.admins.find_one({"username": username}):
+        flash("Admin exists!", "danger")
     else:
-        return render_template('submit.html')
+        hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
+        db.admins.insert_one({"username": username, "password": hashed_pw})
+        flash("Admin created!", "success")
+    return redirect(url_for("admin_dashboard"))
 
-# Delete Item
-@app.route('/delete_item/<item_id>', methods=['POST'])
-def delete_item(item_id):
+@app.route("/admin/delete_item/<item_id>", methods=["POST"])
+@login_required
+def admin_delete_item(item_id):
+    if current_user.role != "admin":
+        flash("Admins only!", "danger")
+        return redirect(url_for("home"))
+    db.items.delete_one({"_id": ObjectId(item_id)})
+    flash("Item deleted!", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/logout")
+@login_required
+def admin_logout():
+    logout_user()
+    return redirect(url_for("admin_login"))
+
+# -------------------
+# Serve Images
+# -------------------
+from flask import Response
+@app.route("/image/<image_id>")
+def get_image(image_id):
     try:
-        collection.delete_one({'_id': ObjectId(item_id)})
-        return '', 204
-    except Exception as e:
-        print(f"Error Deleting: {e}")
-        return '', 500
+        img = fs.get(ObjectId(image_id))
+        return Response(img.read(), mimetype="image/jpeg")
+    except:
+        return "Image Not Found", 404
 
-if __name__ == '__main__':
-    # Get dynamic port for deployment (default to 5000 locally)
-    port = int(os.environ.get("PORT", 5000))
-    print(f"Starting app on port {port}...")
-
-    # Run Flask app
-    app.run(host='0.0.0.0', port=port)
+# -------------------
+if __name__ == "__main__":
+    if not os.path.exists("static/uploads"):
+        os.makedirs("static/uploads")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
